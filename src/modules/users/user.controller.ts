@@ -1,22 +1,8 @@
 import { Request, Response } from "express";
-import { UserModel } from "./user.schema";
+import { UserModel, validateUser } from "./user.schema";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-const validateSignup = z.object({
-  username: z
-    .string()
-    .min(3, "username should be at least of length 3")
-    .max(10, "username cannot be greater than length 10"),
-
-  password: z
-    .string()
-    .regex(
-      /^(?=.*[A-Z])(?=.*[\W_]).{8,}$/,
-      "password should contains at least an uppercase character and special symbol"
-    ),
-});
 
 export default class UserController {
   async signup(req: Request, res: Response) {
@@ -24,10 +10,10 @@ export default class UserController {
       const { username, password } = req.body;
       // validate username and password using zod
 
-      const parseData = validateSignup.safeParse({ username, password });
+      const parseData = validateUser.safeParse({ username, password });
 
       if (!parseData.success) {
-        return res.status(411).json({
+        return res.status(200).json({
           success: false,
           message: parseData.error.issues[0].message,
         });
@@ -36,14 +22,14 @@ export default class UserController {
       const existingUser = await UserModel.findOne({ username });
 
       if (existingUser) {
-        return res.status(411).json({
+        return res.status(200).json({
           success: false,
           message: "user with this username already exists",
         });
       }
 
-      const salt = bcrypt.genSaltSync(10);
-      const hashedPassword = bcrypt.hashSync(password, salt);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
 
       await UserModel.create({
         username,
@@ -67,24 +53,35 @@ export default class UserController {
 
   async signin(req: Request, res: Response) {
     try {
-        const { username, password } = req.body;
+      
+      const { username, password } = req.body;
 
+      const parseData = validateUser.safeParse({ username, password });
 
+      if (!parseData.success) {
+        return res.status(200).json({
+          success: false,
+          message: parseData.error.issues[0].message,
+        });
+      }
+      
     // check for user existence
     const existingUser = await UserModel.findOne({ username });
-
+    
+    
     if (!existingUser || !existingUser.password) {
-      return res.status(411).json({
+      return res.status(200).json({
         success: false,
         message: "user does not exists",
       });
     }
-
+    
     // check username and password
-
-    const isMatch = bcrypt.compareSync(password, existingUser.password);
+    
+    const isMatch = await bcrypt.compare(password, existingUser.password);
+    
     if (!isMatch) {
-      return res.status(401).json({
+      return res.status(200).json({
         success: false,
         message: "Incorrect credentials",
       });
@@ -103,6 +100,8 @@ export default class UserController {
       message: "Login successful",
       token,
     });
+
+    
     } catch (error) {
         console.log(error);
 

@@ -6,13 +6,17 @@ const userRouter = Router();
 const userController = new UserController();
 
 
-userRouter.post("/signup", (req: Request, res: Response)=>{
-    userController.signup(req,res);
-})
 
 userRouter.post("/signin", (req: Request, res: Response)=>{
     userController.signin(req,res);
 })
+
+
+userRouter.post("/signup", (req: Request, res: Response)=>{
+    userController.signup(req,res);
+})
+
+
 
 
 
